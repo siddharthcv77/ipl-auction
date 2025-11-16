@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>IPL Auction</title>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .player-card {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 30px;
+            margin: 20px 0;
+            text-align: center;
+            min-height: 150px;
+        }
+        .player-name {
+            font-size: 32px;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+        .base-price {
+            font-size: 24px;
+            color: #28a745;
+            font-weight: bold;
+        }
+        button {
+            width: 100%;
+            padding: 20px;
+            font-size: 20px;
+            font-weight: bold;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .stats {
+            text-align: center;
+            margin: 20px 0;
+            color: #666;
+            font-size: 16px;
+        }
+        .complete-message {
+            background: #28a745;
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 20px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏏 IPL Auction 2025</h1>
+        
+        <div class="stats" id="stats">
+            Waiting for players...
+        </div>
+        
+        <div class="player-card" id="playerCard">
+            <p style="color: #999;">Click "Next Player" to start the auction</p>
+        </div>
+        
+        <button id="nextBtn" onclick="nextPlayer()">Next Player</button>
+        <button onclick="resetAuction()" style="margin-top: 10px; background: #dc3545;">Reset Auction</button>
+    </div>
+
+    <script>
+        const socket = io();
+        
+        socket.on('connect', function() {
+            console.log('Connected to auction server');
+        });
+        
+        socket.on('auction_state', function(data) {
+            updateStats(data.remaining_players, data.total_players);
+        });
+        
+        socket.on('new_player', function(data) {
+            document.getElementById('playerCard').innerHTML = `
+                <div class="player-name">${data.name}</div>
+                <div class="base-price">Base Price: ₹${data.base_price} Cr</div>
+            `;
+            updateStats(data.remaining, data.total);
+        });
+        
+        socket.on('auction_complete', function(data) {
+            document.getElementById('playerCard').innerHTML = `
+                <div class="complete-message">${data.message}</div>
+            `;
+            document.getElementById('nextBtn').disabled = true;
+        });
+        
+        socket.on('auction_reset', function(data) {
+            document.getElementById('playerCard').innerHTML = `
+                <p style="color: #999;">Auction reset! Click "Next Player" to continue</p>
+            `;
+            document.getElementById('nextBtn').disabled = false;
+            updateStats(data.total_players, data.total_players);
+        });
+        
+        function nextPlayer() {
+            socket.emit('next_player');
+        }
+        
+        function resetAuction() {
+            if (confirm('Are you sure you want to reset and reshuffle?')) {
+                socket.emit('reset_auction');
+            }
+        }
+        
+        function updateStats(remaining, total) {
+            document.getElementById('stats').innerHTML = 
+                `Players Remaining: ${remaining} / ${total}`;
+        }
+    </script>
+</body>
+</html>
