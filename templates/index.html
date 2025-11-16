@@ -92,8 +92,11 @@
             <p style="color: #999;">Click "Next Player" to start the auction</p>
         </div>
         
-        <button id="nextBtn" onclick="nextPlayer()">Next Player</button>
-        <button onclick="resetAuction()" style="margin-top: 10px; background: #dc3545;">Reset Auction</button>
+        <div style="display: flex; gap: 10px;">
+            <button id="backBtn" onclick="backPlayer()" style="flex: 1; background: #ffc107; color: #333;">← Back</button>
+            <button id="nextBtn" onclick="nextPlayer()" style="flex: 1;">Next Player →</button>
+        </div>
+        <button onclick="resetAuction()" style="margin-top: 10px; width: 100%; background: #dc3545;">Reset Auction</button>
     </div>
 
     <script>
@@ -131,7 +134,9 @@
         });
         
         function nextPlayer() {
-            socket.emit('next_player');
+            if (confirm('Ready to call the next player?')) {
+                socket.emit('next_player');
+            }
         }
         
         function resetAuction() {
@@ -143,6 +148,11 @@
         function updateStats(remaining, total) {
             document.getElementById('stats').innerHTML = 
                 `Players Remaining: ${remaining} / ${total}`;
+        }
+        function backPlayer() {
+            if (confirm('Go back to the previous player?')) {
+                socket.emit('back_player');
+            }
         }
     </script>
 </body>

@@ -107,6 +107,38 @@ def handle_next_player():
         f"Called player: {player.get('name', 'Unknown')}, Remaining: {len(player_queue) - current_index}"
     )
 
+@socketio.on("back_player")
+def handle_back_player():
+    """Go back to the previous player"""
+    global current_index
+
+    if current_index <= 0:
+        emit(
+            "error_message",
+            {"message": "Already at the first player!"},
+            broadcast=True,
+        )
+        return
+
+    # Decrement index to go back
+    current_index -= 1
+    player = player_queue[current_index]
+
+    # Broadcast the previous player
+    emit(
+        "new_player",
+        {
+            "name": player.get("name", "Unknown"),
+            "base_price": player.get("base_price", 0),
+            "remaining": len(player_queue) - current_index,
+            "total": len(player_queue),
+        },
+        broadcast=True,
+    )
+
+    print(
+        f"Going back to: {player.get('name', 'Unknown')}, Remaining: {len(player_queue) - current_index}"
+    )
 
 @socketio.on("reset_auction")
 def handle_reset():
