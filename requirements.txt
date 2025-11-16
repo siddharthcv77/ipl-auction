@@ -5,3 +5,5 @@ python-socketio==5.10.0
 eventlet==0.35.1
 pandas==2.1.4
 gunicorn==21.2.0
+openpyxl==3.11.0
+python-dotenv==1.0.0

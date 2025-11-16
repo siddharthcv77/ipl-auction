@@ -2,9 +2,13 @@ from flask import Flask, render_template, request
 from flask_socketio import SocketIO, emit
 import pandas as pd
 import random
+import os
+from pathlib import Path
 
 app = Flask(__name__)
-app.config["SECRET_KEY"] = "your-secret-key-here"
+app.config["SECRET_KEY"] = (
+    "7a3f9e8c2d1b5a6f4e3d2c1b9a8f7e6d5c4b3a2f1e0d9c8b7a6f5e4d3c2b1a0"
+)
 socketio = SocketIO(app, cors_allowed_origins="*")
 
 # Global variable to store shuffled player list
@@ -16,17 +20,31 @@ def load_and_shuffle_players():
     """Load players from Excel and shuffle once at startup"""
     global player_queue, current_index
 
-    # Read your Excel file (you'll upload this)
-    df = pd.read_excel("players.xlsx")
+    try:
+        # Look for players.xlsx in the app directory
+        excel_path = Path(__file__).parent / "players.xlsx"
 
-    # Convert to list of dictionaries
-    player_queue = df.to_dict("records")
+        if not excel_path.exists():
+            print(f"Warning: {excel_path} not found. Starting with empty player queue.")
+            player_queue = []
+            current_index = 0
+            return
 
-    # Shuffle the entire list once
-    random.shuffle(player_queue)
-    current_index = 0
+        # Read your Excel file
+        df = pd.read_excel(str(excel_path))
 
-    print(f"Loaded and shuffled {len(player_queue)} players")
+        # Convert to list of dictionaries
+        player_queue = df.to_dict("records")
+
+        # Shuffle the entire list once
+        random.shuffle(player_queue)
+        current_index = 0
+
+        print(f"Loaded and shuffled {len(player_queue)} players")
+    except Exception as e:
+        print(f"Error loading players: {e}")
+        player_queue = []
+        current_index = 0
 
 
 @app.route("/")
@@ -52,6 +70,14 @@ def handle_next_player():
     """Pop next player from shuffled queue and broadcast to all clients"""
     global current_index
 
+    if not player_queue:
+        emit(
+            "auction_complete",
+            {"message": "No players loaded! Please check your players.xlsx file."},
+            broadcast=True,
+        )
+        return
+
     if current_index >= len(player_queue):
         # Auction complete
         emit(
@@ -69,8 +95,8 @@ def handle_next_player():
     emit(
         "new_player",
         {
-            "name": player["name"],
-            "base_price": player["base_price"],
+            "name": player.get("name", "Unknown"),
+            "base_price": player.get("base_price", 0),
             "remaining": len(player_queue) - current_index,
             "total": len(player_queue),
         },
@@ -78,7 +104,7 @@ def handle_next_player():
     )
 
     print(
-        f"Called player: {player['name']}, Remaining: {len(player_queue) - current_index}"
+        f"Called player: {player.get('name', 'Unknown')}, Remaining: {len(player_queue) - current_index}"
     )
 
 
@@ -91,4 +117,5 @@ def handle_reset():
 
 if __name__ == "__main__":
     load_and_shuffle_players()
-    socketio.run(app, host="0.0.0.0", port=5000, debug=False)
+    port = int(os.getenv("PORT", 5000))
+    socketio.run(app, host="0.0.0.0", port=port, debug=False)
